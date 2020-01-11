@@ -25,13 +25,20 @@ import (
 
 // balanceCmd represents the balance command
 var balanceCmd = &cobra.Command{
-	Use:     "balance",
-	Aliases: []string{"sync-to-ynab"},
-	Short:   "",
-	Long:    ``,
+	Use:   "balance",
+	Short: "",
+	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("balance called")
-		bitcoinhelper.GetMarketPrice("USD", "Last")
+		verbose, _ := cmd.Flags().GetBool("verbose")
+		currency, err := cmd.Flags().GetString("currency")
+		if err != nil {
+			panic(err)
+		}
+		btcHelper := new(bitcoinhelper.BitcoinHelper)
+		btcHelper.Init(verbose)
+		conversionPrice := btcHelper.GetMarketPrice(currency, "Last")
+		btcBalance := btcHelper.GetAddressBalance()
+		fmt.Printf("Current balance (%s): %f\n", currency, btcBalance*conversionPrice)
 	},
 }
 
@@ -42,7 +49,8 @@ func init() {
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// balanceCmd.PersistentFlags().String("foo", "", "A help for foo")
+	balanceCmd.PersistentFlags().BoolP("verbose", "v", false, "Verbose output")
+	balanceCmd.PersistentFlags().String("currency", "USD", "Currency to retrieve (USD, CAD, HKD, etc.)")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
