@@ -197,7 +197,6 @@ func (bh *BitcoinHelper) getField(v *Ticker, currency string, field string) (flo
 // GetMarketPrice ...
 func (bh *BitcoinHelper) GetMarketPrice(currency string, field string) (float64, error) {
 	var price float64
-	price = 0.0
 
 	response, err := http.Get("https://blockchain.info/ticker")
 	if err != nil {
@@ -265,7 +264,6 @@ func (bh *BitcoinHelper) ShowAddressBalance() error {
 // GetAddressBalance ...
 func (bh *BitcoinHelper) GetAddressBalance() (int64, error) {
 	var balance int64
-	balance = 0.0
 
 	btcAddr, err := envhelper.GetRequiredEnv("BITCOIN_ADDR")
 	if err != nil {
