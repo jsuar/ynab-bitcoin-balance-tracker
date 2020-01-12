@@ -77,7 +77,8 @@ var balanceCmd = &cobra.Command{
 		fmt.Printf("%s\n\n", result)
 
 		if sync {
-			ynabhelper.CreateTransaction(delta)
+			err = ynabhelper.CreateTransaction(delta)
+			handleError(err, exitOnError)
 		}
 	},
 }
