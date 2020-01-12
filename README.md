@@ -1,3 +1,5 @@
+[![Go Report Card](https://goreportcard.com/badge/github.com/jsuar/ynab-bitcoin-balance-tracker)](https://goreportcard.com/report/github.com/jsuar/ynab-bitcoin-balance-tracker)
+
 # YNAB Bitcoin Balance Tracker
 
 This simple CLI helps sync bitcoin price changes to your YNAB account(s). It also has some functions to help find the necessary IDs for automating the syncing process since YNAB doesn't provide end users with easy access to budget IDs, account IDs, etc.
