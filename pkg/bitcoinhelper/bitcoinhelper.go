@@ -195,28 +195,26 @@ func (bh *BitcoinHelper) getField(v *Ticker, currency string, field string) (flo
 }
 
 // GetMarketPrice ...
-func (bh *BitcoinHelper) GetMarketPrice(currency string, field string) float64 {
+func (bh *BitcoinHelper) GetMarketPrice(currency string, field string) (float64, error) {
 	var price float64
 	price = 0.0
 
 	response, err := http.Get("https://blockchain.info/ticker")
 	if err != nil {
-		panic(fmt.Sprintf("The HTTP request failed with error %s\n", err))
-	} else {
-		data, _ := ioutil.ReadAll(response.Body)
-		// fmt.Println(string(data))
-
-		var ticker Ticker
-		json.Unmarshal(data, &ticker)
-
-		price, err = bh.getField(&ticker, currency, field)
-		if err != nil {
-			panic(err)
-		}
-
+		return 0, fmt.Errorf("The HTTP request failed with error %s", err)
 	}
 
-	return price
+	data, _ := ioutil.ReadAll(response.Body)
+
+	var ticker Ticker
+	json.Unmarshal(data, &ticker)
+
+	price, err = bh.getField(&ticker, currency, field)
+	if err != nil {
+		return 0, err
+	}
+
+	return price, nil
 }
 
 // BitcoinAddress contains data from a bitcoin address such as balance
@@ -238,7 +236,7 @@ type BitcoinAddress struct {
 }
 
 // ShowAddressBalance ...
-func (bh *BitcoinHelper) ShowAddressBalance() {
+func (bh *BitcoinHelper) ShowAddressBalance() error {
 	btcAddr, err := envhelper.GetRequiredEnv("BITCOIN_ADDR")
 	if err != nil {
 		fmt.Println(err)
@@ -248,18 +246,24 @@ func (bh *BitcoinHelper) ShowAddressBalance() {
 	url := fmt.Sprintf("https://chain.api.btc.com/v3/address/%s", btcAddr)
 	response, err := http.Get(url)
 	if err != nil {
-		panic(fmt.Sprintf("The HTTP request failed with error %s\n", err))
+		return fmt.Errorf("The HTTP request failed with error %s", err)
 	}
-	data, _ := ioutil.ReadAll(response.Body)
 
+	data, _ := ioutil.ReadAll(response.Body)
 	var btcAddress BitcoinAddress
-	json.Unmarshal(data, &btcAddress)
-	fmt.Println("mBtc", float64(btcAddress.Data.Balance)/100000.0)
+	err = json.Unmarshal(data, &btcAddress)
+	if err != nil {
+		return err
+	}
+
 	fmt.Println("Btc", float64(btcAddress.Data.Balance)/100000000.0)
+	fmt.Println("mBtc", float64(btcAddress.Data.Balance)/100000.0)
+
+	return nil
 }
 
 // GetAddressBalance ...
-func (bh *BitcoinHelper) GetAddressBalance() int64 {
+func (bh *BitcoinHelper) GetAddressBalance() (int64, error) {
 	var balance int64
 	balance = 0.0
 
@@ -272,13 +276,16 @@ func (bh *BitcoinHelper) GetAddressBalance() int64 {
 	url := fmt.Sprintf("https://chain.api.btc.com/v3/address/%s", btcAddr)
 	response, err := http.Get(url)
 	if err != nil {
-		panic(fmt.Sprintf("The HTTP request failed with error %s\n", err))
+		return 0, fmt.Errorf("The HTTP request failed with error %s", err)
 	}
-	data, _ := ioutil.ReadAll(response.Body)
 
+	data, _ := ioutil.ReadAll(response.Body)
 	var btcAddress BitcoinAddress
-	json.Unmarshal(data, &btcAddress)
+	err = json.Unmarshal(data, &btcAddress)
+	if err != nil {
+		return 0, err
+	}
 	balance = int64(btcAddress.Data.Balance)
 
-	return balance
+	return balance, nil
 }
