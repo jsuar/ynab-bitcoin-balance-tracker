@@ -2,7 +2,6 @@ package bitcoinhelper
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -190,7 +189,7 @@ func (bh *BitcoinHelper) getField(v *Ticker, currency string, field string) (flo
 		}
 	}
 
-	return 0, errors.New("sd")
+	return 0, fmt.Errorf("Field %s does not exist", field)
 }
 
 // GetMarketPrice ...
@@ -236,9 +235,25 @@ type BitcoinAddress struct {
 	} `json:"data"`
 }
 
+// ShowAddressBalance ...
+func (bh *BitcoinHelper) ShowAddressBalance() {
+	btcAddr := os.Getenv("BITCOIN_ADDR")
+	url := fmt.Sprintf("https://chain.api.btc.com/v3/address/%s", btcAddr)
+	response, err := http.Get(url)
+	if err != nil {
+		panic(fmt.Sprintf("The HTTP request failed with error %s\n", err))
+	}
+	data, _ := ioutil.ReadAll(response.Body)
+
+	var btcAddress BitcoinAddress
+	json.Unmarshal(data, &btcAddress)
+	fmt.Println("mBtc", float64(btcAddress.Data.Balance)/100000.0)
+	fmt.Println("Btc", float64(btcAddress.Data.Balance)/100000000.0)
+}
+
 // GetAddressBalance ...
-func (bh *BitcoinHelper) GetAddressBalance() float64 {
-	var balance float64
+func (bh *BitcoinHelper) GetAddressBalance() int64 {
+	var balance int64
 	balance = 0.0
 
 	btcAddr := os.Getenv("BITCOIN_ADDR")
@@ -246,18 +261,12 @@ func (bh *BitcoinHelper) GetAddressBalance() float64 {
 	response, err := http.Get(url)
 	if err != nil {
 		panic(fmt.Sprintf("The HTTP request failed with error %s\n", err))
-	} else {
-		data, _ := ioutil.ReadAll(response.Body)
-
-		var btcAddress BitcoinAddress
-		json.Unmarshal(data, &btcAddress)
-
-		if bh.verbose {
-			fmt.Println("mBtc", float64(btcAddress.Data.Balance)/100000.0)
-			fmt.Println("Btc", float64(btcAddress.Data.Balance)/100000000.0)
-		}
-		balance = float64(btcAddress.Data.Balance) / 100000000.0
 	}
+	data, _ := ioutil.ReadAll(response.Body)
+
+	var btcAddress BitcoinAddress
+	json.Unmarshal(data, &btcAddress)
+	balance = int64(btcAddress.Data.Balance)
 
 	return balance
 }
