@@ -18,36 +18,67 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/jsuar/ynab-bitcoin-balance-tracker/pkg/bitcoinhelper"
 	"github.com/jsuar/ynab-bitcoin-balance-tracker/pkg/ynabhelper"
+	"github.com/ryanuber/columnize"
 	"github.com/spf13/cobra"
 )
+
+func handleError(err error, exit bool) {
+	if err != nil {
+		fmt.Println(err)
+		if exit {
+			os.Exit(1)
+		}
+	}
+}
 
 // balanceCmd represents the balance command
 var balanceCmd = &cobra.Command{
 	Use:   "balance",
-	Short: "",
+	Short: "Display balances and sync to YNAB",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		verbose, _ := cmd.Flags().GetBool("verbose")
+		exitOnError := true
+		// Handle flags
+		verbose, err := cmd.Flags().GetBool("verbose")
+		handleError(err, exitOnError)
 		currency, err := cmd.Flags().GetString("currency")
-		if err != nil {
-			panic(err)
-		}
+		handleError(err, exitOnError)
+		sync, err := cmd.Flags().GetBool("sync")
+		handleError(err, exitOnError)
+
+		// Handle bitcoin info
 		btcHelper := new(bitcoinhelper.BitcoinHelper)
 		btcHelper.Init(verbose)
-		conversionPrice := btcHelper.GetMarketPrice(currency, "Last")
-		btcBalance := btcHelper.GetAddressBalance()
-		convertedBalance := float64(btcBalance) / 100000000 * conversionPrice
-		fmt.Printf("Current balance (%s): %.2f\n", currency, convertedBalance)
+		exchangeRate, err := btcHelper.GetMarketPrice(currency, "Last")
+		handleError(err, exitOnError)
+
+		btcBalance, err := btcHelper.GetAddressBalance()
+		handleError(err, exitOnError)
+
+		var output []string
+		output = append(output, "Current Value|$")
+
+		convertedBalance := float64(btcBalance) / 100000000 * exchangeRate
+		output = append(output, fmt.Sprintf("Bitcoin balance (%s)|%.2f", currency, convertedBalance))
 
 		ynabhelper := new(ynabhelper.YnabHelper)
 		ynabhelper.Init(verbose)
 		accountBalance := ynabhelper.GetAccountBalance()
-		fmt.Printf("Current account balance: %d\n", accountBalance)
+		output = append(output, fmt.Sprintf("YNAB Account|%.2f", float64(accountBalance)/1000.0))
 
-		ynabhelper.CreateTransaction()
+		delta := int64(convertedBalance*1000) - accountBalance
+		output = append(output, fmt.Sprintf("Delta|%.2f", float64(delta)/1000.0))
+
+		result := columnize.SimpleFormat(output)
+		fmt.Printf("%s\n\n", result)
+
+		if sync {
+			ynabhelper.CreateTransaction(delta)
+		}
 	},
 }
 
@@ -60,6 +91,8 @@ func init() {
 	// and all subcommands, e.g.:
 	balanceCmd.PersistentFlags().BoolP("verbose", "v", false, "Verbose output")
 	balanceCmd.PersistentFlags().String("currency", "USD", "Currency to retrieve (USD, CAD, HKD, etc.)")
+
+	balanceCmd.PersistentFlags().BoolP("sync", "s", false, "Sync balance delta with YNAB")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
