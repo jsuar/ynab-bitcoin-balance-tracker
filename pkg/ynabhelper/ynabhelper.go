@@ -174,5 +174,4 @@ func (yh *YnabHelper) CreateTransaction(amount int64) error {
 		}
 	}
 	return nil
-
 }
