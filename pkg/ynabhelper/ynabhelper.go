@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/jsuar/ynab-bitcoin-balance-tracker/pkg/envhelper"
 	"github.com/ryanuber/columnize"
 	"go.bmvs.io/ynab"
 	"go.bmvs.io/ynab/api"
@@ -23,10 +24,12 @@ type YnabHelper struct {
 
 // Init will initialize the YnabHelper object
 func (yh *YnabHelper) Init(verbose bool) {
+	var err error
 	yh.verbose = verbose
-	yh.BearerToken = os.Getenv("YNAB_BEARER_TOKEN")
-	if yh.BearerToken == "" {
-		fmt.Println("YNAB bearer token required. YNAB requests will fail.")
+	yh.BearerToken, err = envhelper.GetRequiredEnv("YNAB_BEARER_TOKEN")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }
 
@@ -112,11 +115,16 @@ func (yh *YnabHelper) getAccountByName(budgetName string, accountName string) (*
 
 // GetAccountBalance returns the balance for a specificed budget and account
 func (yh *YnabHelper) GetAccountBalance() int64 {
-	budgetID := os.Getenv("YNAB_BUDGET_ID")
-	accountID := os.Getenv("YNAB_ACCOUNT_ID")
+	budgetID, err := envhelper.GetRequiredEnv("YNAB_BUDGET_ID")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
-	if budgetID == "" || accountID == "" {
-		panic("budget ID and account ID must be set as environment variables")
+	accountID, err := envhelper.GetRequiredEnv("YNAB_ACCOUNT_ID")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	c := ynab.NewClient(yh.BearerToken)
@@ -129,14 +137,19 @@ func (yh *YnabHelper) GetAccountBalance() int64 {
 }
 
 // CreateTransaction creates a YNAB transaction
-func (yh *YnabHelper) CreateTransaction() {
+func (yh *YnabHelper) CreateTransaction(amount int64) {
 	c := ynab.NewClient(yh.BearerToken)
 
-	budgetID := os.Getenv("YNAB_BUDGET_ID")
-	accountID := os.Getenv("YNAB_ACCOUNT_ID")
+	budgetID, err := envhelper.GetRequiredEnv("YNAB_BUDGET_ID")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
-	if budgetID == "" || accountID == "" {
-		panic("budget ID and account ID must be set as environment variables")
+	accountID, err := envhelper.GetRequiredEnv("YNAB_ACCOUNT_ID")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	payloadMemo := "Auto filled"
@@ -144,7 +157,7 @@ func (yh *YnabHelper) CreateTransaction() {
 	p := transaction.PayloadTransaction{
 		AccountID:  accountID,
 		Date:       api.Date{time.Now()},
-		Amount:     0,
+		Amount:     amount,
 		Cleared:    transaction.ClearingStatusCleared,
 		Approved:   true,
 		PayeeID:    nil,

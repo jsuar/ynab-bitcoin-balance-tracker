@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+
+	"github.com/jsuar/ynab-bitcoin-balance-tracker/pkg/envhelper"
 )
 
 // BitcoinHelper provides helper functions
@@ -237,7 +239,12 @@ type BitcoinAddress struct {
 
 // ShowAddressBalance ...
 func (bh *BitcoinHelper) ShowAddressBalance() {
-	btcAddr := os.Getenv("BITCOIN_ADDR")
+	btcAddr, err := envhelper.GetRequiredEnv("BITCOIN_ADDR")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	url := fmt.Sprintf("https://chain.api.btc.com/v3/address/%s", btcAddr)
 	response, err := http.Get(url)
 	if err != nil {
@@ -256,7 +263,12 @@ func (bh *BitcoinHelper) GetAddressBalance() int64 {
 	var balance int64
 	balance = 0.0
 
-	btcAddr := os.Getenv("BITCOIN_ADDR")
+	btcAddr, err := envhelper.GetRequiredEnv("BITCOIN_ADDR")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	url := fmt.Sprintf("https://chain.api.btc.com/v3/address/%s", btcAddr)
 	response, err := http.Get(url)
 	if err != nil {
