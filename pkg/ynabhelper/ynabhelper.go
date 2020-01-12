@@ -170,8 +170,12 @@ func (yh *YnabHelper) CreateTransaction(amount int64) error {
 
 	if yh.verbose {
 		for _, t := range createdTransactions.Transactions {
-			fmt.Printf("Transaction %s with amount %.2f was created on %s\n", t.ID, float64(t.Amount)/1000.0, t.Date.Format("Mon Jan _2 15:04:05 2006"))
+			amountFormatted := float64(t.Amount) / 1000.0
+			fmt.Printf("Transaction %s of amount %.2f was created on %s\n", t.ID, amountFormatted, t.Date.Format("Mon Jan _2 15:04:05 2006"))
 		}
+	} else {
+		amountFormatted := float64(amount) / 1000.0
+		fmt.Printf("Transaction of amount %.2f successfully created.\n", amountFormatted)
 	}
 	return nil
 }
