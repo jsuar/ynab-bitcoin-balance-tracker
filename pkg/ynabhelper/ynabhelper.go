@@ -137,23 +137,20 @@ func (yh *YnabHelper) GetAccountBalance() int64 {
 }
 
 // CreateTransaction creates a YNAB transaction
-func (yh *YnabHelper) CreateTransaction(amount int64) {
+func (yh *YnabHelper) CreateTransaction(amount int64) error {
 	c := ynab.NewClient(yh.BearerToken)
 
 	budgetID, err := envhelper.GetRequiredEnv("YNAB_BUDGET_ID")
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return err
 	}
 
 	accountID, err := envhelper.GetRequiredEnv("YNAB_ACCOUNT_ID")
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return err
 	}
 
-	payloadMemo := "Auto filled"
-	// date := api.Date{time.Now()}
+	payloadMemo := "Auto filled with YNAB Bitcoin Balance Tracker"
 	p := transaction.PayloadTransaction{
 		AccountID:  accountID,
 		Date:       api.Date{time.Now()},
@@ -168,8 +165,14 @@ func (yh *YnabHelper) CreateTransaction(amount int64) {
 	transaction := c.Transaction()
 	createdTransactions, err := transaction.CreateTransaction(budgetID, p)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	fmt.Println("Transactions created: ", createdTransactions.Transactions)
+
+	if yh.verbose {
+		for _, t := range createdTransactions.Transactions {
+			fmt.Printf("Transaction %s with amount %.2f was created on %s\n", t.ID, float64(t.Amount)/1000.0, t.Date.Format("Mon Jan _2 15:04:05 2006"))
+		}
+	}
+	return nil
 
 }
