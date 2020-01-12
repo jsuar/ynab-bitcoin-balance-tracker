@@ -1,4 +1,4 @@
-// Package cmd balance displays the balance
+// Package cmd handles all CLI calls
 /*
 Copyright © 2020 John Suarez jsuar@users.noreply.github.com
 
@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/jsuar/ynab-bitcoin-balance-tracker/pkg/bitcoinhelper"
+	"github.com/jsuar/ynab-bitcoin-balance-tracker/pkg/ynabhelper"
 	"github.com/spf13/cobra"
 )
 
@@ -38,7 +39,15 @@ var balanceCmd = &cobra.Command{
 		btcHelper.Init(verbose)
 		conversionPrice := btcHelper.GetMarketPrice(currency, "Last")
 		btcBalance := btcHelper.GetAddressBalance()
-		fmt.Printf("Current balance (%s): %f\n", currency, btcBalance*conversionPrice)
+		convertedBalance := float64(btcBalance) / 100000000 * conversionPrice
+		fmt.Printf("Current balance (%s): %.2f\n", currency, convertedBalance)
+
+		ynabhelper := new(ynabhelper.YnabHelper)
+		ynabhelper.Init(verbose)
+		accountBalance := ynabhelper.GetAccountBalance()
+		fmt.Printf("Current account balance: %d\n", accountBalance)
+
+		ynabhelper.CreateTransaction()
 	},
 }
 
