@@ -18,5 +18,5 @@ package main
 import "github.com/jsuar/ynab-bitcoin-balance-tracker/cmd"
 
 func main() {
-  cmd.Execute()
+	cmd.Execute()
 }
