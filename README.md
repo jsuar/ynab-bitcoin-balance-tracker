@@ -6,12 +6,44 @@ Note: I built this for my minor understanding of Bitcoin.
 
 # How to use
 
+## Prerequisites
+
 Required environment variables:
 ```
 YNAB_BEARER_TOKEN
 YNAB_BUDGET_ID
 YNAB_ACCOUNT_ID
 BITCOIN_ADDR
+```
+
+A [bearer token](https://api.youneedabudget.com/#authentication-overview) can be created from [your My Account page](https://app.youneedabudget.com/settings) in YNAB web app.
+
+Use the [resource functions](#resource-functions) to obtain the `YNAB_BUDGET_ID` and `YNAB_ACCOUNT_ID` values.
+
+And set `BITCOIN_ADDR` for the transaction balance you would like to track.
+
+## Commands
+
+The `balance` command will display your YNAB balance and the current value of a Bitcoin transaction.
+
+```
+$ ynab-bitcoin-balance-tracker balance
+Current Value          $
+Bitcoin balance (USD)  5222.84
+YNAB Account           5270.11
+Delta                  -52.72
+```
+
+Adding the `--sync` flag will create a transction in YNAB based on the account and budget IDs set as environment variables.
+
+```
+$ ynab-bitcoin-balance-tracker balance --sync
+Current Value          $
+Bitcoin balance (USD)  5280.51
+YNAB Account           5279.99
+Delta                  0.52
+
+Transaction of amount 0.52 successfully created.
 ```
 
 ## Resource Functions
