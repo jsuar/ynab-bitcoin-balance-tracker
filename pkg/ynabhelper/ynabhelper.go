@@ -152,7 +152,7 @@ func (yh *YnabHelper) CreateTransaction(amount int64) error {
 
 	// Add time to message
 	timeNow := time.Now()
-	payloadMemo := fmt.Sprintf("%s - Auto filled with YNAB Bitcoin Balance Tracker", timeNow.Format("3:04PM"))
+	payloadMemo := fmt.Sprintf("%s - Auto filled with YNAB Bitcoin Balance Tracker", timeNow.Format("2006-01-02 15:04:05"))
 	p := transaction.PayloadTransaction{
 		AccountID:  accountID,
 		Date:       api.Date{timeNow},
