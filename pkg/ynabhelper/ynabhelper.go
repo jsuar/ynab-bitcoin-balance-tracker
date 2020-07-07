@@ -12,6 +12,7 @@ import (
 	"go.bmvs.io/ynab/api/account"
 	"go.bmvs.io/ynab/api/budget"
 	"go.bmvs.io/ynab/api/transaction"
+	"go.uber.org/zap"
 )
 
 const baseURL string = "https://api.youneedabudget.com/v1"
@@ -20,27 +21,39 @@ const baseURL string = "https://api.youneedabudget.com/v1"
 type YnabHelper struct {
 	BearerToken string
 	verbose     bool
+	logger      *zap.SugaredLogger
 }
 
 // Init will initialize the YnabHelper object
-func (yh *YnabHelper) Init(verbose bool) {
+func (yh *YnabHelper) Init(verbose bool, logger *zap.SugaredLogger) error {
 	var err error
+	yh.logger = logger
 	yh.verbose = verbose
 	yh.BearerToken, err = envhelper.GetRequiredEnv("YNAB_BEARER_TOKEN")
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return err
+	}
+	return nil
+}
+
+// HandleError provides an option to exit on a error
+func (yh *YnabHelper) HandleError(err error, exit bool) {
+	if err != nil {
+		yh.logger.Error(err)
+		if exit {
+			os.Exit(1)
+		}
 	}
 }
 
 // ListBudgets lists all the budgets associated with the bearer token
-func (yh *YnabHelper) ListBudgets() {
+func (yh *YnabHelper) ListBudgets() error {
 	var output []string
 
 	c := ynab.NewClient(yh.BearerToken)
 	budgets, err := c.Budget().GetBudgets()
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	output = append(output, "Name|ID")
@@ -50,13 +63,14 @@ func (yh *YnabHelper) ListBudgets() {
 
 	result := columnize.SimpleFormat(output)
 	fmt.Printf("%s\n\n", result)
+	return nil
 }
 
 func (yh *YnabHelper) getBudgetByName(budgetName string) (*budget.Summary, error) {
 	c := ynab.NewClient(yh.BearerToken)
 	budgets, err := c.Budget().GetBudgets()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	for _, budget := range budgets {
@@ -69,18 +83,18 @@ func (yh *YnabHelper) getBudgetByName(budgetName string) (*budget.Summary, error
 }
 
 // ListAccounts list all the accounts under a budget
-func (yh *YnabHelper) ListAccounts(budgetName string) {
+func (yh *YnabHelper) ListAccounts(budgetName string) error {
 	var output []string
 
 	budget, err := yh.getBudgetByName(budgetName)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	c := ynab.NewClient(yh.BearerToken)
 	accounts, err := c.Account().GetAccounts(budget.ID)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	output = append(output, "Name|ID")
@@ -90,18 +104,19 @@ func (yh *YnabHelper) ListAccounts(budgetName string) {
 
 	result := columnize.SimpleFormat(output)
 	fmt.Printf("%s\n\n", result)
+	return nil
 }
 
 func (yh *YnabHelper) getAccountByName(budgetName string, accountName string) (*account.Account, error) {
 	budget, err := yh.getBudgetByName(budgetName)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	c := ynab.NewClient(yh.BearerToken)
 	accounts, err := c.Account().GetAccounts(budget.ID)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	for _, account := range accounts {
@@ -114,26 +129,24 @@ func (yh *YnabHelper) getAccountByName(budgetName string, accountName string) (*
 }
 
 // GetAccountBalance returns the balance for a specificed budget and account
-func (yh *YnabHelper) GetAccountBalance() int64 {
+func (yh *YnabHelper) GetAccountBalance() (int64, error) {
 	budgetID, err := envhelper.GetRequiredEnv("YNAB_BUDGET_ID")
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return 0, err
 	}
 
 	accountID, err := envhelper.GetRequiredEnv("YNAB_ACCOUNT_ID")
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return 0, err
 	}
 
 	c := ynab.NewClient(yh.BearerToken)
 	account, err := c.Account().GetAccount(budgetID, accountID)
 	if err != nil {
-		panic(err)
+		return 0, err
 	}
 
-	return account.Balance
+	return account.Balance, nil
 }
 
 // CreateTransaction creates a YNAB transaction

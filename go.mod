@@ -9,6 +9,7 @@ require (
 	github.com/spf13/viper v1.6.1
 	github.com/stretchr/testify v1.4.0 // indirect
 	go.bmvs.io/ynab v1.3.0
+	go.uber.org/zap v1.10.0
 	golang.org/x/sys v0.0.0-20190616124812-15dcb6c0061f // indirect
 	golang.org/x/text v0.3.2 // indirect
 )

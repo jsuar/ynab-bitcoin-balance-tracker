@@ -27,14 +27,17 @@ var accountsCmd = &cobra.Command{
 	Short: "Lists the name and ID of all YNAB accounts",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		budgetName, err := cmd.Flags().GetString("budgetName")
+		logger, err := InitLogger()
 		if err != nil {
 			panic(err)
 		}
+		budgetName, err := cmd.Flags().GetString("budgetName")
+		HandleError(err, true, logger)
 
-		ynabhelper := new(ynabhelper.YnabHelper)
-		ynabhelper.Init(true)
-		ynabhelper.ListAccounts(budgetName)
+		yh := new(ynabhelper.YnabHelper)
+		err = yh.Init(true, logger)
+		HandleError(err, true, logger)
+		yh.ListAccounts(budgetName)
 	},
 }
 

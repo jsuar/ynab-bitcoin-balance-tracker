@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/jsuar/ynab-bitcoin-balance-tracker/pkg/bitcoinhelper"
 	"github.com/jsuar/ynab-bitcoin-balance-tracker/pkg/ynabhelper"
@@ -26,38 +25,38 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func handleError(err error, exit bool) {
-	if err != nil {
-		fmt.Println(err)
-		if exit {
-			os.Exit(1)
-		}
-	}
-}
-
 // balanceCmd represents the balance command
 var balanceCmd = &cobra.Command{
 	Use:   "balance",
 	Short: "Display balances and sync to YNAB",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		exitOnError := true
+		logger, err := InitLogger()
+		if err != nil {
+			panic(err)
+		}
+
 		// Handle flags
-		verbose, err := cmd.Flags().GetBool("verbose")
-		handleError(err, exitOnError)
-		currency, err := cmd.Flags().GetString("currency")
-		handleError(err, exitOnError)
-		sync, err := cmd.Flags().GetBool("sync")
-		handleError(err, exitOnError)
+		verbose := false
+		verbose, err = cmd.Flags().GetBool("verbose")
+		HandleError(err, false, logger)
+
+		currency := "USD"
+		currency, err = cmd.Flags().GetString("currency")
+		HandleError(err, false, logger)
+
+		sync := false
+		sync, err = cmd.Flags().GetBool("sync")
+		HandleError(err, false, logger)
 
 		// Handle bitcoin info
 		btcHelper := new(bitcoinhelper.BitcoinHelper)
-		btcHelper.Init(verbose)
+		btcHelper.Init(verbose, logger)
 		exchangeRate, err := btcHelper.GetMarketPrice(currency, "Last")
-		handleError(err, exitOnError)
+		HandleError(err, true, logger)
 
 		btcBalance, err := btcHelper.GetAddressBalance()
-		handleError(err, exitOnError)
+		HandleError(err, true, logger)
 
 		var output []string
 		output = append(output, "Current Value|$")
@@ -66,8 +65,10 @@ var balanceCmd = &cobra.Command{
 		output = append(output, fmt.Sprintf("Bitcoin balance (%s)|%.2f", currency, convertedBalance))
 
 		ynabhelper := new(ynabhelper.YnabHelper)
-		ynabhelper.Init(verbose)
-		accountBalance := ynabhelper.GetAccountBalance()
+		err = ynabhelper.Init(verbose, logger)
+		HandleError(err, true, logger)
+		accountBalance, err := ynabhelper.GetAccountBalance()
+		HandleError(err, true, logger)
 		output = append(output, fmt.Sprintf("YNAB Account|%.2f", float64(accountBalance)/1000.0))
 
 		delta := int64(convertedBalance*1000) - accountBalance
@@ -78,7 +79,7 @@ var balanceCmd = &cobra.Command{
 
 		if sync {
 			err = ynabhelper.CreateTransaction(delta)
-			handleError(err, exitOnError)
+			HandleError(err, true, logger)
 		}
 	},
 }

@@ -18,8 +18,10 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
 	"os"
+
+	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
@@ -88,5 +90,42 @@ func initConfig() {
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
+	}
+}
+
+// InitLogger returns an initialized zap logger
+func InitLogger() (*zap.SugaredLogger, error) {
+	logLevelEnvVar := os.Getenv("YNAB_BTC_LOG_LEVEL")
+
+	cfg := zap.NewDevelopmentConfig()
+	switch logLevelEnvVar {
+	case "debug":
+		cfg.Level.SetLevel(zap.DebugLevel)
+	case "info":
+		cfg.Level.SetLevel(zap.InfoLevel)
+	case "warning":
+		cfg.Level.SetLevel(zap.WarnLevel)
+	case "error":
+		cfg.Level.SetLevel(zap.ErrorLevel)
+	default:
+		cfg.Level.SetLevel(zap.WarnLevel)
+	}
+
+	logger, err := cfg.Build()
+	if err != nil {
+		return nil, err
+	}
+
+	return logger.Sugar(), nil
+}
+
+// HandleError logs the error and has an option to exit
+func HandleError(err error, exitOnError bool, logger *zap.SugaredLogger) {
+	if err != nil {
+		logger.Error(err)
+		if exitOnError {
+			// logger.Panic(err)
+			os.Exit(1)
+		}
 	}
 }

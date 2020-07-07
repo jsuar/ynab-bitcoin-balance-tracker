@@ -9,6 +9,7 @@ import (
 	"reflect"
 
 	"github.com/jsuar/ynab-bitcoin-balance-tracker/pkg/envhelper"
+	"go.uber.org/zap"
 )
 
 // BitcoinHelper provides helper functions
@@ -16,6 +17,7 @@ type BitcoinHelper struct {
 	Ticker         *Ticker
 	BitcoinAddress *BitcoinAddress
 	verbose        bool
+	logger         *zap.SugaredLogger
 }
 
 // Ticker stores different currency bitcoin data
@@ -177,8 +179,9 @@ type Ticker struct {
 }
 
 // Init will initialize the BitcoinHelper object
-func (bh *BitcoinHelper) Init(verbose bool) {
+func (bh *BitcoinHelper) Init(verbose bool, logger *zap.SugaredLogger) {
 	bh.verbose = verbose
+	bh.logger = logger
 }
 
 func (bh *BitcoinHelper) getField(v *Ticker, currency string, field string) (float64, error) {
@@ -198,12 +201,19 @@ func (bh *BitcoinHelper) getField(v *Ticker, currency string, field string) (flo
 func (bh *BitcoinHelper) GetMarketPrice(currency string, field string) (float64, error) {
 	var price float64
 
-	response, err := http.Get("https://blockchain.info/ticker")
+	url := "https://blockchain.info/ticker"
+	response, err := http.Get(url)
 	if err != nil {
 		return 0, fmt.Errorf("The HTTP request failed with error %s", err)
 	}
+	if response.StatusCode != 200 {
+		return 0, fmt.Errorf("Request to %s failed with status code: %d", url, response.StatusCode)
+	}
 
-	data, _ := ioutil.ReadAll(response.Body)
+	data, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return 0, err
+	}
 
 	var ticker Ticker
 	json.Unmarshal(data, &ticker)
@@ -220,10 +230,11 @@ func (bh *BitcoinHelper) GetMarketPrice(currency string, field string) (float64,
 type BitcoinAddress struct {
 	ErrNo int `json:"err_no"`
 	Data  struct {
-		Address             string `json:"address"`
-		Received            int    `json:"received"`
-		Sent                int    `json:"sent"`
-		Balance             int    `json:"balance"`
+		Address  string `json:"address"`
+		Received int    `json:"received"`
+		Sent     int    `json:"sent"`
+		// Balance             int    `json:"balance"`
+		Balance             int    `json:"banlance"`
 		TxCount             int    `json:"tx_count"`
 		UnconfirmedTxCount  int    `json:"unconfirmed_tx_count"`
 		UnconfirmedReceived int    `json:"unconfirmed_received"`
@@ -236,9 +247,10 @@ type BitcoinAddress struct {
 
 // ShowAddressBalance ...
 func (bh *BitcoinHelper) ShowAddressBalance() error {
-	btcAddr, err := envhelper.GetRequiredEnv("BITCOIN_ADDR")
+	envVar := "BITCOIN_ADDR"
+	btcAddr, err := envhelper.GetRequiredEnv(envVar)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf(err.Error())
 		os.Exit(1)
 	}
 
@@ -246,6 +258,9 @@ func (bh *BitcoinHelper) ShowAddressBalance() error {
 	response, err := http.Get(url)
 	if err != nil {
 		return fmt.Errorf("The HTTP request failed with error %s", err)
+	}
+	if response.StatusCode != 200 {
+		return fmt.Errorf("Request to %s failed with status code: %d", url, response.StatusCode)
 	}
 
 	data, _ := ioutil.ReadAll(response.Body)
@@ -266,15 +281,20 @@ func (bh *BitcoinHelper) GetAddressBalance() (int64, error) {
 	var balance int64
 
 	btcAddr, err := envhelper.GetRequiredEnv("BITCOIN_ADDR")
+	bh.logger.Infof("BITCOIN_ADDR=%s", btcAddr)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return 0, err
 	}
 
 	url := fmt.Sprintf("https://chain.api.btc.com/v3/address/%s", btcAddr)
+	bh.logger.Infof("url: %s", url)
 	response, err := http.Get(url)
+	bh.logger.Infof("response: %s", response)
 	if err != nil {
 		return 0, fmt.Errorf("The HTTP request failed with error %s", err)
+	}
+	if response.StatusCode != 200 {
+		return 0, fmt.Errorf("Request to %s failed with status code: %d", url, response.StatusCode)
 	}
 
 	data, _ := ioutil.ReadAll(response.Body)

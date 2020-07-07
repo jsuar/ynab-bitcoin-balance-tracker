@@ -1,3 +1,4 @@
 .DS_STORE
 ynab-bitcoin-balance-tracker
 vendor/
+.envrc
