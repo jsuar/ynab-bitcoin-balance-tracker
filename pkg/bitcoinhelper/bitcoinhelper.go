@@ -233,8 +233,8 @@ type BitcoinAddress struct {
 		Address  string `json:"address"`
 		Received int    `json:"received"`
 		Sent     int    `json:"sent"`
-		// Balance             int    `json:"balance"`
-		Balance             int    `json:"banlance"`
+		Balance  int    `json:"balance"`
+		// Balance             int    `json:"banlance"`
 		TxCount             int    `json:"tx_count"`
 		UnconfirmedTxCount  int    `json:"unconfirmed_tx_count"`
 		UnconfirmedReceived int    `json:"unconfirmed_received"`
@@ -289,7 +289,8 @@ func (bh *BitcoinHelper) GetAddressBalance() (int64, error) {
 	url := fmt.Sprintf("https://chain.api.btc.com/v3/address/%s", btcAddr)
 	bh.logger.Infof("url: %s", url)
 	response, err := http.Get(url)
-	bh.logger.Infof("response: %s", response)
+	bh.logger.Infof("response: %s\n", response)
+	bh.logger.Infof("status: %s\n", response.Status)
 	if err != nil {
 		return 0, fmt.Errorf("The HTTP request failed with error %s", err)
 	}
@@ -297,12 +298,18 @@ func (bh *BitcoinHelper) GetAddressBalance() (int64, error) {
 		return 0, fmt.Errorf("Request to %s failed with status code: %d", url, response.StatusCode)
 	}
 
-	data, _ := ioutil.ReadAll(response.Body)
+	data, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return 0, fmt.Errorf("ReadAll failed with: %s", err)
+	}
+	bh.logger.Infof("body data: %s\n", data)
 	var btcAddress BitcoinAddress
 	err = json.Unmarshal(data, &btcAddress)
 	if err != nil {
 		return 0, err
 	}
+
+	bh.logger.Infof("unmarshalled balance: %d\n", btcAddress.Data.Balance)
 	balance = int64(btcAddress.Data.Balance)
 
 	return balance, nil
